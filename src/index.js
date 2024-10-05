@@ -1,17 +1,33 @@
 import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './index.css';
+import ReactDOM from 'react-dom';
 import App from './App';
-import reportWebVitals from './reportWebVitals';
-import { register as registerServiceWorker } from './serviceWorkerRegistration';
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(
-    <React.StrictMode>
-        <App />
-    </React.StrictMode>
-);
+// Register the service worker
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+            .then((registration) => {
+                console.log('Service Worker registered with scope:', registration.scope);
+            })
+            .catch((error) => {
+                console.error('Service Worker registration failed:', error);
+            });
+    });
+}
 
-registerServiceWorker(); // Register the service worker
+// Check for service worker updates
+navigator.serviceWorker.onupdatefound = () => {
+    const installingWorker = navigator.serviceWorker.installing;
+    installingWorker.onstatechange = () => {
+        if (installingWorker.state === 'installed') {
+            if (navigator.serviceWorker.controller) {
+                console.log('New content is available; please refresh.');
+            } else {
+                console.log('Content is cached for offline use.');
+            }
+        }
+    };
+};
 
-reportWebVitals();
+// Render the App component
+ReactDOM.render(<App />, document.getElementById('root'));
