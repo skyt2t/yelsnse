@@ -2,6 +2,7 @@ import { Component } from "react";
 import { useSwipeable } from "react-swipeable";
 import JobCard from "../JobCardPage";
 import axios from 'axios';
+import InfiniteScroll from "react-infinite-scroll-component";
 import "./index.css";
 
 const JobSwipeCard = ({ job, onBookmark, onDismiss }) => {
@@ -30,7 +31,8 @@ class Jobs extends Component {
         hasMore: true,
         page: 1,
         loading: false,
-        error: null
+        error: null,
+        allJobs: []  // To store all fetched jobs
     };
 
     componentDidMount() {
@@ -39,32 +41,35 @@ class Jobs extends Component {
     }
 
     handleFetchJobs = () => {
-        const { page } = this.state;
+        const { page, allJobs } = this.state;
+
         this.setState({ loading: true });
-        console.log(`Fetching jobs for page ${page}...`);
 
         axios.get(`https://testapi.getlokalapp.com/common/jobs?page=${page}`)
             .then(response => {
                 const newJobs = response.data.results;
-                console.log('Fetched jobs:', newJobs);
 
                 if (newJobs.length > 0) {
                     this.setState(prevState => ({
                         jobs: [...prevState.jobs, ...newJobs],
+                        allJobs: [...prevState.allJobs, ...newJobs],
                         page: prevState.page + 1,
                         loading: false
                     }));
-                    console.log(`Loaded ${newJobs.length} new jobs.`);
                 } else {
-                    this.setState({ hasMore: false, loading: false });
-                    console.log('No more jobs available.');
+                    this.setState(prevState => ({
+                        jobs: [...prevState.jobs, ...allJobs],
+                        loading: false
+                    }));
                 }
             })
             .catch(error => {
                 console.log('Error fetching jobs', error);
                 this.setState({ loading: false, error: 'Failed to fetch jobs' });
             });
-    };
+    }
+
+   
 
     handleBookmarkJob = (job) => {
         let { bookmarkedJobs } = this.state;
@@ -91,22 +96,30 @@ class Jobs extends Component {
     };
 
     render() {
-        const { jobs, error } = this.state;
+        const { jobs, hasMore, error } = this.state;
 
         return (
             <div className="jobs-container">
                 <h1 className="title">Job Opportunities</h1>
                 {error && <p className="error-message">{error}</p>}
-                <div className="job-list">
-                    {jobs.map((job) => (
-                        <JobSwipeCard
-                            key={job.id}
-                            job={job}
-                            onBookmark={this.handleBookmarkJob}
-                            onDismiss={this.handleDismissJob}
-                        />
-                    ))}
-                </div>
+                <InfiniteScroll
+                    dataLength={jobs.length}
+                    next={this.handleFetchJobs}
+                    hasMore={hasMore}
+                    loader={<h4>Loading...</h4>}
+                    endMessage={<p>No more jobs available.</p>}
+                >
+                    <div className="job-list">
+                        {jobs.map((job) => (
+                            <JobSwipeCard
+                                key={job.id}
+                                job={job}
+                                onBookmark={this.handleBookmarkJob}
+                                onDismiss={this.handleDismissJob}
+                            />
+                        ))}
+                    </div>
+                </InfiniteScroll>
             </div>
         );
     }
